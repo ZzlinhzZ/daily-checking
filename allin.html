@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>30 Ô Đánh Dấu</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #f9f9f9;
+      font-family: sans-serif;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .box {
+      border: 1px solid #ccc;
+      position: relative;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .box-number {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: red;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+
+    .completed .circle {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="gridContainer"></div>
+
+  <script>
+    const container = document.getElementById('gridContainer');
+
+    // Lấy trạng thái từ localStorage
+    let completedBoxes = JSON.parse(localStorage.getItem('completedBoxes')) || [];
+
+    for (let i = 1; i <= 30; i++) {
+      const box = document.createElement('div');
+      box.className = 'box';
+      box.dataset.index = i;
+
+      if (completedBoxes.includes(i)) {
+        box.classList.add('completed');
+      }
+
+      box.innerHTML = `
+        <div class="box-number">${i}</div>
+        <div class="circle"></div>
+      `;
+
+      box.addEventListener('click', () => {
+        box.classList.toggle('completed');
+        const index = i;
+
+        if (box.classList.contains('completed')) {
+          if (!completedBoxes.includes(index)) {
+            completedBoxes.push(index);
+          }
+        } else {
+          completedBoxes = completedBoxes.filter(item => item !== index);
+        }
+
+        // Lưu lại trạng thái mới vào localStorage
+        localStorage.setItem('completedBoxes', JSON.stringify(completedBoxes));
+      });
+
+      container.appendChild(box);
+    }
+  </script>
+</body>
+</html>
