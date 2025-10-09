@@ -1,37 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>30 Ô Đánh Dấu</title>
+  <title>Lịch 30 Ô Đánh Dấu</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
       background-color: #f9f9f9;
       font-family: sans-serif;
     }
 
-    .container {
+    .calendar {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      grid-template-rows: repeat(5, 1fr);
-      height: 100vh;
+      grid-template-columns: repeat(7, 1fr);
       width: 100vw;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .weekday {
+      background-color: #eaeaea;
+      text-align: center;
+      padding: 10px 0;
+      font-weight: bold;
+      border: 1px solid #ccc;
     }
 
     .box {
       border: 1px solid #ccc;
       position: relative;
       cursor: pointer;
+      text-align: center;
+      padding-top: 20px;
       box-sizing: border-box;
     }
 
-    .box-number {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      font-size: 14px;
+    .day-number {
+      font-size: 18px;
+      font-weight: bold;
       color: #333;
     }
 
@@ -41,7 +48,7 @@
       border-radius: 50%;
       background-color: red;
       position: absolute;
-      top: 50%;
+      top: 60%;
       left: 50%;
       transform: translate(-50%, -50%);
       display: none;
@@ -50,34 +57,72 @@
     .completed .circle {
       display: block;
     }
+
+    .today {
+      background-color: #fff5c2;
+      border: 2px solid #ffb300;
+    }
   </style>
 </head>
 <body>
-  <div class="container" id="gridContainer"></div>
+  <div class="calendar" id="calendar"></div>
 
   <script>
-    const container = document.getElementById('gridContainer');
+    const calendar = document.getElementById('calendar');
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
 
-    // Lấy trạng thái từ localStorage
+    // Số ngày trong tháng hiện tại
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+    // Lấy thứ của ngày 1 trong tháng
+    const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+
+    // Mảng tên thứ
+    const weekdayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+    // Lấy trạng thái đã lưu
     let completedBoxes = JSON.parse(localStorage.getItem('completedBoxes')) || [];
 
-    for (let i = 1; i <= 30; i++) {
+    // === HÀNG THỨ ===
+    weekdayNames.forEach(name => {
+      const w = document.createElement('div');
+      w.className = 'weekday';
+      w.textContent = name;
+      calendar.appendChild(w);
+    });
+
+    // === TẠO CÁC Ô TRỐNG TRƯỚC NGÀY 1 (nếu cần) ===
+    for (let i = 0; i < firstDay; i++) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'box';
+      calendar.appendChild(emptyBox);
+    }
+
+    // === TẠO CÁC Ô NGÀY ===
+    for (let day = 1; day <= daysInMonth && day <= 31; day++) {
       const box = document.createElement('div');
       box.className = 'box';
-      box.dataset.index = i;
+      box.dataset.index = day;
 
-      if (completedBoxes.includes(i)) {
+      if (completedBoxes.includes(day)) {
         box.classList.add('completed');
       }
 
+      if (day === currentDay) {
+        box.classList.add('today');
+      }
+
       box.innerHTML = `
-        <div class="box-number">${i}</div>
+        <div class="day-number">${day}</div>
         <div class="circle"></div>
       `;
 
       box.addEventListener('click', () => {
         box.classList.toggle('completed');
-        const index = i;
+        const index = day;
 
         if (box.classList.contains('completed')) {
           if (!completedBoxes.includes(index)) {
@@ -87,11 +132,10 @@
           completedBoxes = completedBoxes.filter(item => item !== index);
         }
 
-        // Lưu lại trạng thái mới vào localStorage
         localStorage.setItem('completedBoxes', JSON.stringify(completedBoxes));
       });
 
-      container.appendChild(box);
+      calendar.appendChild(box);
     }
   </script>
 </body>
