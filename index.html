@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Lịch 30 Ô Đánh Dấu</title>
+  <title>Lịch Đánh Dấu Theo Màu</title>
   <style>
     html, body {
       margin: 0;
@@ -46,26 +46,75 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background-color: red;
       position: absolute;
       top: 60%;
       left: 50%;
       transform: translate(-50%, -50%);
-      display: none;
+      display: none; /* Ẩn theo mặc định */
     }
-
+    
+    /* Hiển thị vòng tròn khi ô được đánh dấu 'completed' */
     .completed .circle {
       display: block;
     }
+    
+    /* Các lớp màu cho vòng tròn */
+    .circle-red { background-color: red; }
+    .circle-green { background-color: #28a745; } /* green */
+    .circle-yellow { background-color: #ffc107; } /* yellow */
+
 
     .today {
       background-color: #fff5c2;
       border: 2px solid #ffb300;
     }
+    
+    /* === CSS CHO CÁC THẺ CHỌN MÀU === */
+    .color-palette {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .color-note {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 3px solid transparent;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .color-note:hover {
+        transform: scale(1.1);
+    }
+
+    .color-note.active {
+        border-color: #333;
+        transform: scale(1.15);
+    }
+
+    .color-note.red { background-color: red; }
+    .color-note.green { background-color: #28a745; }
+    .color-note.yellow { background-color: #ffc107; }
+
   </style>
 </head>
 <body>
   <div class="calendar" id="calendar"></div>
+
+  <div class="color-palette">
+    <div class="color-note red active" data-color="red"></div>
+    <div class="color-note green" data-color="green"></div>
+    <div class="color-note yellow" data-color="yellow"></div>
+  </div>
+
 
   <script>
     const calendar = document.getElementById('calendar');
@@ -74,17 +123,21 @@
     const currentMonth = today.getMonth() + 1;
     const currentYear = today.getFullYear();
 
+    // === BIẾN MỚI CHO VIỆC CHỌN MÀU ===
+    let selectedColor = 'red'; // Mặc định là màu đỏ
+    const colorNotes = document.querySelectorAll('.color-note');
+
     // Số ngày trong tháng hiện tại
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-
     // Lấy thứ của ngày 1 trong tháng
     const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
-
     // Mảng tên thứ
     const weekdayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-    // Lấy trạng thái đã lưu
-    let completedBoxes = JSON.parse(localStorage.getItem('completedBoxes')) || [];
+    // === CẬP NHẬT CẤU TRÚC LƯU TRỮ ===
+    // Thay vì một mảng, chúng ta dùng một đối tượng để lưu ngày và màu sắc tương ứng
+    // Ví dụ: { "1": "red", "5": "green" }
+    let markedDays = JSON.parse(localStorage.getItem('markedDays')) || {};
 
     // === HÀNG THỨ ===
     weekdayNames.forEach(name => {
@@ -94,49 +147,76 @@
       calendar.appendChild(w);
     });
 
-    // === TẠO CÁC Ô TRỐNG TRƯỚC NGÀY 1 (nếu cần) ===
+    // === TẠO CÁC Ô TRỐNG TRƯỚC NGÀY 1 ===
     for (let i = 0; i < firstDay; i++) {
       const emptyBox = document.createElement('div');
       emptyBox.className = 'box';
       calendar.appendChild(emptyBox);
     }
 
-    // === TẠO CÁC Ô NGÀY ===
-    for (let day = 1; day <= daysInMonth && day <= 31; day++) {
+    // === TẠO CÁC Ô NGÀY (ĐÃ CẬP NHẬT LOGIC) ===
+    for (let day = 1; day <= daysInMonth; day++) {
       const box = document.createElement('div');
       box.className = 'box';
-      box.dataset.index = day;
+      box.dataset.day = day;
 
-      if (completedBoxes.includes(day)) {
+      // Tạo sẵn vòng tròn nhưng chưa có màu
+      box.innerHTML = `
+        <div class="day-number">${day}</div>
+        <div class="circle"></div>
+      `;
+      
+      const circle = box.querySelector('.circle');
+
+      // Kiểm tra xem ngày này đã được đánh dấu chưa
+      if (markedDays[day]) {
         box.classList.add('completed');
+        const color = markedDays[day]; // Lấy màu đã lưu
+        circle.classList.add(`circle-${color}`); // Thêm lớp màu tương ứng
       }
 
       if (day === currentDay) {
         box.classList.add('today');
       }
 
-      box.innerHTML = `
-        <div class="day-number">${day}</div>
-        <div class="circle"></div>
-      `;
-
+      // === CẬP NHẬT LOGIC KHI CLICK VÀO MỘT NGÀY ===
       box.addEventListener('click', () => {
-        box.classList.toggle('completed');
-        const index = day;
-
-        if (box.classList.contains('completed')) {
-          if (!completedBoxes.includes(index)) {
-            completedBoxes.push(index);
-          }
-        } else {
-          completedBoxes = completedBoxes.filter(item => item !== index);
+        const dayIndex = day;
+        
+        // Nếu ngày đã được đánh dấu -> xóa đánh dấu
+        if (markedDays[dayIndex]) {
+            box.classList.remove('completed');
+            // Xóa lớp màu cũ khỏi vòng tròn
+            circle.className = 'circle'; 
+            delete markedDays[dayIndex];
+        } 
+        // Nếu ngày chưa được đánh dấu -> đánh dấu bằng màu đã chọn
+        else {
+            box.classList.add('completed');
+            // Thêm lớp màu đang được chọn
+            circle.classList.add(`circle-${selectedColor}`);
+            markedDays[dayIndex] = selectedColor;
         }
 
-        localStorage.setItem('completedBoxes', JSON.stringify(completedBoxes));
+        // Lưu lại trạng thái mới vào localStorage
+        localStorage.setItem('markedDays', JSON.stringify(markedDays));
       });
 
       calendar.appendChild(box);
     }
+    
+    // === LOGIC MỚI ĐỂ XỬ LÝ CHỌN MÀU ===
+    colorNotes.forEach(note => {
+        note.addEventListener('click', () => {
+            // Bỏ lớp 'active' khỏi tất cả các thẻ màu
+            colorNotes.forEach(n => n.classList.remove('active'));
+            // Thêm lớp 'active' cho thẻ màu vừa được click
+            note.classList.add('active');
+            // Cập nhật biến màu đã chọn
+            selectedColor = note.dataset.color;
+        });
+    });
+
   </script>
 </body>
 </html>
