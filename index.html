@@ -1,222 +1,465 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Lịch Đánh Dấu Theo Màu</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background-color: #f9f9f9;
-      font-family: sans-serif;
-    }
-
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      width: 100vw;
-      height: 100vh;
-      box-sizing: border-box;
-    }
-
-    .weekday {
-      background-color: #eaeaea;
-      text-align: center;
-      padding: 10px 0;
-      font-weight: bold;
-      border: 1px solid #ccc;
-    }
-
-    .box {
-      border: 1px solid #ccc;
-      position: relative;
-      cursor: pointer;
-      text-align: center;
-      padding-top: 20px;
-      box-sizing: border-box;
-    }
-
-    .day-number {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-    }
-
-    .circle {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      position: absolute;
-      top: 60%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: none; /* Ẩn theo mặc định */
-    }
-    
-    /* Hiển thị vòng tròn khi ô được đánh dấu 'completed' */
-    .completed .circle {
-      display: block;
-    }
-    
-    /* Các lớp màu cho vòng tròn */
-    .circle-red { background-color: red; }
-    .circle-green { background-color: #28a745; } /* green */
-    .circle-yellow { background-color: #ffc107; } /* yellow */
-
-
-    .today {
-      background-color: #fff5c2;
-      border: 2px solid #ffb300;
-    }
-    
-    /* === CSS CHO CÁC THẺ CHỌN MÀU === */
-    .color-palette {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        display: flex;
-        gap: 10px;
-        background-color: rgba(255, 255, 255, 0.8);
-        padding: 10px;
-        border-radius: 12px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .color-note {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        cursor: pointer;
-        border: 3px solid transparent;
-        transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-
-    .color-note:hover {
-        transform: scale(1.1);
-    }
-
-    .color-note.active {
-        border-color: #333;
-        transform: scale(1.15);
-    }
-
-    .color-note.red { background-color: red; }
-    .color-note.green { background-color: #28a745; }
-    .color-note.yellow { background-color: #ffc107; }
-
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lịch học & Theo dõi thời gian</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:#f7f8fa; color:#222; font-family:system-ui,-apple-system,sans-serif; }
+  body { padding:16px; }
+  .app { max-width:1100px; margin:0 auto; }
+  h1 { font-size:clamp(22px,4vw,30px); margin:4px 0 16px; }
+  h2 { font-size:18px; margin:0 0 12px; }
+  .panel { background:white; border:1px solid #e5e7eb; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow:0 3px 12px rgba(0,0,0,.04); }
+  .timer-panel { text-align:center; }
+  .today-label { color:#667085; font-size:14px; }
+  .timer { font-size:clamp(38px,8vw,64px); font-weight:750; letter-spacing:1px; font-variant-numeric:tabular-nums; margin:8px 0; }
+  .timer-status { color:#667085; min-height:24px; margin-bottom:14px; }
+  .buttons { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  button { font:inherit; border:0; border-radius:10px; padding:10px 18px; cursor:pointer; font-weight:650; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .start { background:#16803c; color:white; }
+  .pause { background:#f0b429; color:#222; }
+  .reset { background:#eef0f3; color:#333; }
+  .small-note { color:#6b7280; font-size:12px; margin-top:12px; }
+  .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+  .stat { background:#f8fafc; border-radius:12px; padding:14px; min-width:0; }
+  .stat-label { color:#667085; font-size:13px; }
+  .stat-value { font-size:clamp(19px,3vw,27px); font-weight:750; margin-top:6px; overflow-wrap:anywhere; }
+  .calendar-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .month-title { font-size:18px; font-weight:750; text-align:center; }
+  .month-btn { padding:7px 12px; background:#f0f2f5; }
+  .calendar { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+  .weekday { text-align:center; font-weight:700; font-size:13px; padding:10px 0; background:#f0f1f3; border:1px solid #ddd; }
+  .box { border:1px solid #e0e0e0; position:relative; min-height:90px; cursor:pointer; text-align:center; padding:9px 4px; background:white; overflow:hidden; }
+  .box.empty { cursor:default; background:#fafafa; }
+  .day-number { font-size:16px; font-weight:750; color:#333; position:relative; z-index:1; }
+  .circle { width:34px; height:34px; border-radius:50%; margin:7px auto 2px; display:none; opacity:.92; }
+  .completed .circle { display:block; }
+  .circle-red { background:red; }
+  .circle-green { background:#28a745; }
+  .circle-yellow { background:#ffc107; }
+  .today { background:#fff5c2; outline:2px solid #ffb300; outline-offset:-2px; }
+  .day-time { font-size:11px; color:#555; position:relative; z-index:1; }
+  .day-running { color:#16803c; font-size:10px; font-weight:700; }
+  .color-palette { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:14px; }
+  .color-note { width:34px; height:34px; border-radius:8px; cursor:pointer; border:3px solid transparent; }
+  .color-note.red { background:red; }
+  .color-note.green { background:#28a745; }
+  .color-note.yellow { background:#ffc107; }
+  .color-note.active { border-color:#222; outline:2px solid white; box-shadow:0 0 0 3px #555; }
+  .legend { font-size:12px; color:#667085; margin-top:8px; }
+  .history { width:100%; border-collapse:collapse; font-size:14px; }
+  .history th,.history td { text-align:left; padding:10px 8px; border-bottom:1px solid #eee; }
+  .history th { color:#667085; font-weight:650; }
+  .empty-history { color:#667085; padding:12px 0; }
+  .danger { color:#b42318; background:#fff0ef; }
+  @media(max-width:650px) {
+    body { padding:9px; }
+    .panel { padding:13px; border-radius:12px; }
+    .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .box { min-height:70px; padding:7px 1px; }
+    .circle { width:26px; height:26px; margin-top:6px; }
+    .day-number { font-size:14px; }
+    .day-time { font-size:9px; }
+    .weekday { font-size:11px; }
+  }
+</style>
 </head>
 <body>
-  <div class="calendar" id="calendar"></div>
+<div class="app">
+  <h1>📚 Lịch học của tôi</h1>
 
-  <div class="color-palette">
-    <div class="color-note red active" data-color="red"></div>
-    <div class="color-note green" data-color="green"></div>
-    <div class="color-note yellow" data-color="yellow"></div>
-  </div>
+  <section class="panel timer-panel">
+    <div class="today-label" id="todayLabel"></div>
+    <div class="timer" id="timer">0 giờ 0 phút</div>
+    <div class="timer-status" id="timerStatus">Chưa bắt đầu học hôm nay</div>
+    <div class="buttons">
+      <button class="start" id="startBtn">▶ Start</button>
+      <button class="pause" id="pauseBtn" disabled>⏸ Pause</button>
+      <button class="reset" id="resetBtn" disabled>↺ Reset hôm nay</button>
+    </div>
+    <div class="small-note">Bấm Start để tự đánh dấu ngày học. Thời gian được lưu trên trình duyệt này.</div>
+  </section>
 
+  <section class="panel">
+    <h2>📊 Thống kê</h2>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Học hôm nay</div><div class="stat-value" id="todayTotal">0 phút</div></div>
+      <div class="stat"><div class="stat-label">Tổng tháng này</div><div class="stat-value" id="monthTotal">0 giờ</div></div>
+      <div class="stat"><div class="stat-label">Số ngày đã học</div><div class="stat-value" id="studyDays">0 ngày</div></div>
+      <div class="stat"><div class="stat-label">Tổng thời gian</div><div class="stat-value" id="allTotal">0 giờ</div></div>
+    </div>
+  </section>
 
-  <script>
-    const calendar = document.getElementById('calendar');
-    const today = new Date();
-    const currentDay = today.getDate();
-    const currentMonth = today.getMonth() + 1;
-    const currentYear = today.getFullYear();
+  <section class="panel">
+    <div class="calendar-head">
+      <button class="month-btn" id="prevMonth" aria-label="Tháng trước">‹</button>
+      <div class="month-title" id="monthTitle"></div>
+      <button class="month-btn" id="nextMonth" aria-label="Tháng sau">›</button>
+    </div>
+    <div class="calendar" id="calendar"></div>
+    <div class="color-palette">
+      <strong>Chọn màu đánh dấu:</strong>
+      <button class="color-note red active" data-color="red" aria-label="Màu đỏ" title="Đỏ"></button>
+      <button class="color-note green" data-color="green" aria-label="Màu xanh lá" title="Xanh lá"></button>
+      <button class="color-note yellow" data-color="yellow" aria-label="Màu vàng" title="Vàng"></button>
+    </div>
+    <div class="legend">Ngày đã Start sẽ tự động được đánh dấu bằng màu đang chọn. Bấm vào ngày chưa học để đánh dấu thủ công; bấm lại ngày đã đánh dấu thủ công để bỏ dấu. Ngày có thời gian học sẽ luôn được tính là ngày đã học.</div>
+  </section>
 
-    // === BIẾN MỚI CHO VIỆC CHỌN MÀU ===
-    let selectedColor = 'red'; // Mặc định là màu đỏ
-    const colorNotes = document.querySelectorAll('.color-note');
+  <section class="panel">
+    <h2>🗓️ Lịch sử học tháng này</h2>
+    <div id="historyContainer"></div>
+  </section>
+</div>
 
-    // Số ngày trong tháng hiện tại
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    // Lấy thứ của ngày 1 trong tháng
-    const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
-    // Mảng tên thứ
-    const weekdayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+<script>
+(() => {
+  const STUDY_KEY = 'studyTracker_v1';
+  const MARK_KEY = 'markedDays';
+  const COLOR_KEY = 'studyTrackerColor';
+  const weekdays = ['CN','T2','T3','T4','T5','T6','T7'];
+  const $ = id => document.getElementById(id);
 
-    // === CẬP NHẬT CẤU TRÚC LƯU TRỮ ===
-    // Thay vì một mảng, chúng ta dùng một đối tượng để lưu ngày và màu sắc tương ứng
-    // Ví dụ: { "1": "red", "5": "green" }
-    let markedDays = JSON.parse(localStorage.getItem('markedDays')) || {};
+  function readJSON(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
 
-    // === HÀNG THỨ ===
-    weekdayNames.forEach(name => {
-      const w = document.createElement('div');
-      w.className = 'weekday';
-      w.textContent = name;
-      calendar.appendChild(w);
+  let studyData = readJSON(STUDY_KEY, {});
+  let markedDays = readJSON(MARK_KEY, {});
+  // Chuyển dữ liệu đánh dấu cũ (chỉ lưu số ngày) sang khóa ngày đầy đủ.
+  if (markedDays && typeof markedDays === 'object' && !Array.isArray(markedDays)) {
+    const migrated = {};
+    const nowForMigration = new Date();
+    for (const [k, v] of Object.entries(markedDays)) {
+      if (/^\\d{4}-\\d{2}-\\d{2}$/.test(k)) migrated[k] = v;
+      else if (/^\\d{1,2}$/.test(k)) migrated[`${nowForMigration.getFullYear()}-${pad(Number(nowForMigration.getMonth()+1))}-${pad(Number(k))}`] = v;
+    }
+    markedDays = migrated;
+  }
+  if (!studyData || typeof studyData !== 'object' || Array.isArray(studyData)) studyData = {};
+  if (!markedDays || typeof markedDays !== 'object' || Array.isArray(markedDays)) markedDays = {};
+  let selectedColor = localStorage.getItem(COLOR_KEY) || 'red';
+  if (!['red','green','yellow'].includes(selectedColor)) selectedColor = 'red';
+
+  let viewYear = new Date().getFullYear();
+  let viewMonth = new Date().getMonth();
+  let ticker = null;
+
+  const pad = n => String(n).padStart(2, '0');
+  const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const parseDate = key => {
+    const [y,m,d] = key.split('-').map(Number);
+    return new Date(y, m-1, d);
+  };
+  const midnightAfter = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()+1).getTime();
+
+  function dayRecord(key) {
+    if (!studyData[key] || typeof studyData[key] !== 'object') {
+      studyData[key] = { totalMs: 0, runningSince: null };
+    }
+    const r = studyData[key];
+    if (!Number.isFinite(r.totalMs) || r.totalMs < 0) r.totalMs = 0;
+    if (r.runningSince !== null && !Number.isFinite(r.runningSince)) r.runningSince = null;
+    return r;
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STUDY_KEY, JSON.stringify(studyData));
+      localStorage.setItem(MARK_KEY, JSON.stringify(markedDays));
+      localStorage.setItem(COLOR_KEY, selectedColor);
+    } catch (e) {
+      console.warn('Không thể lưu dữ liệu trong trình duyệt:', e);
+    }
+  }
+
+  // Nếu bộ đếm đang chạy qua nửa đêm, chia thời gian vào đúng từng ngày.
+  function syncRunningDays(now = Date.now()) {
+    let activeKey = Object.keys(studyData).find(k => studyData[k] && studyData[k].runningSince !== null);
+    if (!activeKey) return;
+    let guard = 0;
+    while (activeKey && guard++ < 4000) {
+      const rec = dayRecord(activeKey);
+      const start = rec.runningSince;
+      const dayStart = parseDate(activeKey).getTime();
+      const nextMidnight = midnightAfter(parseDate(activeKey));
+      if (now < nextMidnight) {
+        // Nếu đồng hồ hệ thống bị chỉnh lùi, tránh số âm.
+        rec.totalMs += Math.max(0, now - start);
+        rec.runningSince = now;
+        break;
+      }
+      rec.totalMs += Math.max(0, nextMidnight - start);
+      rec.runningSince = null;
+      const nextDate = new Date(nextMidnight);
+      const nextKey = dateKey(nextDate);
+      const nextRec = dayRecord(nextKey);
+      nextRec.runningSince = nextMidnight;
+      activeKey = nextKey;
+      if (now === nextMidnight) break;
+    }
+    save();
+  }
+
+  function getTotalMs(key, now = Date.now()) {
+    const r = studyData[key];
+    if (!r) return 0;
+    let total = Number(r.totalMs) || 0;
+    if (r.runningSince !== null && Number.isFinite(r.runningSince)) {
+      total += Math.max(0, now - r.runningSince);
+    }
+    return total;
+  }
+
+  function formatDuration(ms, includeSeconds = false) {
+    const seconds = Math.floor(Math.max(0, ms) / 1000);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return includeSeconds ? `${h} giờ ${m} phút ${s} giây` : (h > 0 ? `${h} giờ ${m} phút` : `${m} phút`);
+  }
+
+  function formatShort(ms) {
+    const minutes = Math.floor(Math.max(0, ms) / 60000);
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h ? `${h}g${m ? ` ${m}p` : ''}` : `${m}p`;
+  }
+
+  function activeKey() {
+    return Object.keys(studyData).find(k => studyData[k] && studyData[k].runningSince !== null) || null;
+  }
+
+  function setStatus() {
+    const today = dateKey(new Date());
+    const r = studyData[today];
+    if (r && r.runningSince !== null) {
+      $('timerStatus').textContent = 'Đang học — đồng hồ đang chạy';
+    } else if (r && r.totalMs > 0) {
+      $('timerStatus').textContent = 'Đã tạm dừng — có thể Continue bằng nút Start';
+    } else {
+      $('timerStatus').textContent = 'Chưa bắt đầu học hôm nay';
+    }
+    $('startBtn').textContent = (r && r.totalMs > 0 && r.runningSince === null) ? '▶ Continue' : '▶ Start';
+    $('startBtn').disabled = !!activeKey();
+    $('pauseBtn').disabled = !activeKey();
+    $('resetBtn').disabled = !(r && (r.totalMs > 0 || r.runningSince !== null));
+  }
+
+  function updateTimer() {
+    const now = Date.now();
+    const today = dateKey(new Date());
+    const total = getTotalMs(today, now);
+    $('timer').textContent = formatDuration(total, true);
+    $('todayLabel').textContent = new Date().toLocaleDateString('vi-VN', {
+      weekday:'long', day:'numeric', month:'long', year:'numeric'
     });
+    const monthPrefix = `${viewYear}-${pad(viewMonth+1)}-`;
+    let monthTotal = 0, allTotal = 0, studyDays = 0;
+    for (const key of Object.keys(studyData)) {
+      const ms = getTotalMs(key, now);
+      allTotal += ms;
+      if (ms > 0) studyDays++;
+      if (key.startsWith(monthPrefix)) monthTotal += ms;
+    }
+    $('todayTotal').textContent = formatDuration(total);
+    $('monthTotal').textContent = formatDuration(monthTotal);
+    $('studyDays').textContent = `${studyDays} ngày`;
+    $('allTotal').textContent = formatDuration(allTotal);
+    setStatus();
+    renderCalendar();
+    renderHistory();
+  }
 
-    // === TẠO CÁC Ô TRỐNG TRƯỚC NGÀY 1 ===
+  function markTodayAutomatically() {
+    const now = new Date();
+    const key = dateKey(now);
+    // Tự đánh dấu ngày học bằng màu đang chọn nếu ngày chưa có màu thủ công.
+    if (!markedDays[key]) markedDays[key] = selectedColor;
+    save();
+  }
+
+  function startTimer() {
+    syncRunningDays();
+    if (activeKey()) return;
+    const now = Date.now();
+    const key = dateKey(new Date(now));
+    const rec = dayRecord(key);
+    rec.runningSince = now;
+    if (!markedDays[key]) markedDays[key] = selectedColor;
+    save();
+    updateTimer();
+  }
+
+  function pauseTimer() {
+    const now = Date.now();
+    syncRunningDays(now);
+    const key = activeKey();
+    if (!key) return;
+    const rec = dayRecord(key);
+    rec.totalMs += Math.max(0, now - rec.runningSince);
+    rec.runningSince = null;
+    save();
+    updateTimer();
+  }
+
+  function resetToday() {
+    const key = dateKey(new Date());
+    const rec = studyData[key];
+    if (!rec) return;
+    if (!confirm('Bạn có chắc muốn xóa toàn bộ thời gian học của hôm nay?')) return;
+    if (rec.runningSince !== null) rec.runningSince = null;
+    delete studyData[key];
+    save();
+    updateTimer();
+  }
+
+  function renderCalendar() {
+    const calendar = $('calendar');
+    calendar.innerHTML = '';
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    $('monthTitle').textContent = new Date(viewYear, viewMonth, 1).toLocaleDateString('vi-VN', {month:'long', year:'numeric'});
+
+    weekdays.forEach(name => {
+      const el = document.createElement('div');
+      el.className = 'weekday';
+      el.textContent = name;
+      calendar.appendChild(el);
+    });
     for (let i = 0; i < firstDay; i++) {
-      const emptyBox = document.createElement('div');
-      emptyBox.className = 'box';
-      calendar.appendChild(emptyBox);
+      const empty = document.createElement('div');
+      empty.className = 'box empty';
+      calendar.appendChild(empty);
     }
 
-    // === TẠO CÁC Ô NGÀY (ĐÃ CẬP NHẬT LOGIC) ===
+    const today = new Date();
+    const todayKey = dateKey(today);
     for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(viewYear, viewMonth, day);
+      const key = dateKey(d);
       const box = document.createElement('div');
       box.className = 'box';
-      box.dataset.day = day;
-
-      // Tạo sẵn vòng tròn nhưng chưa có màu
-      box.innerHTML = `
-        <div class="day-number">${day}</div>
-        <div class="circle"></div>
-      `;
-      
-      const circle = box.querySelector('.circle');
-
-      // Kiểm tra xem ngày này đã được đánh dấu chưa
-      if (markedDays[day]) {
+      if (key === todayKey) box.classList.add('today');
+      const circle = document.createElement('div');
+      circle.className = 'circle';
+      const color = markedDays[key] || (getTotalMs(key) > 0 ? selectedColor : null);
+      if (color) {
         box.classList.add('completed');
-        const color = markedDays[day]; // Lấy màu đã lưu
-        circle.classList.add(`circle-${color}`); // Thêm lớp màu tương ứng
+        circle.classList.add(`circle-${color}`);
+      }
+      const number = document.createElement('div');
+      number.className = 'day-number';
+      number.textContent = day;
+      box.appendChild(number);
+      box.appendChild(circle);
+
+      const ms = getTotalMs(key);
+      if (ms > 0) {
+        const time = document.createElement('div');
+        time.className = 'day-time';
+        time.textContent = formatShort(ms);
+        box.appendChild(time);
+      }
+      const rec = studyData[key];
+      if (rec && rec.runningSince !== null) {
+        const running = document.createElement('div');
+        running.className = 'day-running';
+        running.textContent = '● Đang học';
+        box.appendChild(running);
       }
 
-      if (day === currentDay) {
-        box.classList.add('today');
-      }
-
-      // === CẬP NHẬT LOGIC KHI CLICK VÀO MỘT NGÀY ===
+      box.title = `${key} — ${formatDuration(ms)}${color ? ' — đã đánh dấu' : ''}`;
       box.addEventListener('click', () => {
-        const dayIndex = day;
-        
-        // Nếu ngày đã được đánh dấu -> xóa đánh dấu
-        if (markedDays[dayIndex]) {
-            box.classList.remove('completed');
-            // Xóa lớp màu cũ khỏi vòng tròn
-            circle.className = 'circle'; 
-            delete markedDays[dayIndex];
-        } 
-        // Nếu ngày chưa được đánh dấu -> đánh dấu bằng màu đã chọn
-        else {
-            box.classList.add('completed');
-            // Thêm lớp màu đang được chọn
-            circle.classList.add(`circle-${selectedColor}`);
-            markedDays[dayIndex] = selectedColor;
+        // Ngày có thời gian học không thể bỏ đánh dấu; ngày khác có thể bật/tắt thủ công.
+        if (getTotalMs(key) > 0 || (studyData[key] && studyData[key].runningSince !== null)) {
+          if (!markedDays[key]) {
+            markedDays[key] = selectedColor;
+            save();
+            renderCalendar();
+          }
+          return;
         }
-
-        // Lưu lại trạng thái mới vào localStorage
-        localStorage.setItem('markedDays', JSON.stringify(markedDays));
+        if (markedDays[key]) delete markedDays[key];
+        else markedDays[key] = selectedColor;
+        save();
+        renderCalendar();
       });
-
       calendar.appendChild(box);
     }
-    
-    // === LOGIC MỚI ĐỂ XỬ LÝ CHỌN MÀU ===
-    colorNotes.forEach(note => {
-        note.addEventListener('click', () => {
-            // Bỏ lớp 'active' khỏi tất cả các thẻ màu
-            colorNotes.forEach(n => n.classList.remove('active'));
-            // Thêm lớp 'active' cho thẻ màu vừa được click
-            note.classList.add('active');
-            // Cập nhật biến màu đã chọn
-            selectedColor = note.dataset.color;
-        });
-    });
+  }
 
-  </script>
+  function renderHistory() {
+    const prefix = `${viewYear}-${pad(viewMonth+1)}-`;
+    const keys = Object.keys(studyData).filter(k => k.startsWith(prefix) && getTotalMs(k) > 0).sort().reverse();
+    const container = $('historyContainer');
+    if (!keys.length) {
+      container.innerHTML = '<div class="empty-history">Chưa có thời gian học được lưu trong tháng này.</div>';
+      return;
+    }
+    const table = document.createElement('table');
+    table.className = 'history';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>Ngày</th><th>Thời gian học</th><th>Trạng thái</th></tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    keys.forEach(key => {
+      const tr = document.createElement('tr');
+      const date = parseDate(key).toLocaleDateString('vi-VN', {weekday:'short', day:'2-digit', month:'2-digit'});
+      const running = studyData[key].runningSince !== null;
+      const tdDate = document.createElement('td'); tdDate.textContent = date;
+      const tdTime = document.createElement('td'); tdTime.textContent = formatDuration(getTotalMs(key));
+      const tdState = document.createElement('td'); tdState.textContent = running ? 'Đang học' : 'Đã lưu';
+      tr.append(tdDate, tdTime, tdState);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    container.replaceChildren(table);
+  }
+
+  $('startBtn').addEventListener('click', startTimer);
+  $('pauseBtn').addEventListener('click', pauseTimer);
+  $('resetBtn').addEventListener('click', resetToday);
+  $('prevMonth').addEventListener('click', () => {
+    viewMonth--;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    updateTimer();
+  });
+  $('nextMonth').addEventListener('click', () => {
+    viewMonth++;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    updateTimer();
+  });
+  document.querySelectorAll('.color-note').forEach(note => {
+    if (note.dataset.color === selectedColor) note.classList.add('active');
+    else note.classList.remove('active');
+    note.addEventListener('click', () => {
+      selectedColor = note.dataset.color;
+      document.querySelectorAll('.color-note').forEach(n => n.classList.toggle('active', n === note));
+      save();
+      renderCalendar();
+    });
+  });
+
+  // Đồng bộ bộ đếm đang chạy nếu ngày đã đổi kể từ lần mở trang trước.
+  syncRunningDays();
+  updateTimer();
+  ticker = setInterval(() => {
+    const before = dateKey(new Date());
+    syncRunningDays();
+    const after = dateKey(new Date());
+    if (before !== after) markTodayAutomatically();
+    updateTimer();
+  }, 1000);
+})();
+</script>
 </body>
 </html>
